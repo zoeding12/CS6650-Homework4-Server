@@ -1,3 +1,9 @@
+import io.swagger.client.model.Purchase;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
 import javax.servlet.*;
 import javax.servlet.http.*;
 import javax.servlet.annotation.*;
@@ -6,9 +12,12 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.UUID;
 
 @WebServlet(name = "HwServlet", value = "/HwServlet")
 public class HwServlet extends HttpServlet {
+
+    private static final DAO purchaseDao = new DAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
@@ -43,8 +52,8 @@ public class HwServlet extends HttpServlet {
         if(urlPath.length != 3) {
             return false;
         } else if(!urlPath[2].equals("purchase")){
-        return false;
-    }
+            return false;
+        }
         return true;
     }
 
@@ -101,16 +110,38 @@ public class HwServlet extends HttpServlet {
             res.setStatus(HttpServletResponse.SC_CREATED);
             // do any sophisticated processing with urlParts which contains all the url params
             // TODO: process url params in `urlParts`
-
             res.getWriter().write("It works!");
+
+            processRequest(req, urlParts);
+
         }
 
-        // parse the request body -- TODO: Figure out if I further need it.
+    }
+
+    protected void processRequest(HttpServletRequest req, String[] urlParts) throws IOException {
+        // read the request body
         BufferedReader br = req.getReader();
         StringBuilder sb = new StringBuilder();
         String line;
         while( (line = br.readLine()) != null){
-            sb.append(line);
+            sb.append(line).append("\n");
         }
+
+//        JSONObject json = null;
+//        JSONParser parser = new JSONParser();
+//        try {
+//            json = (JSONObject) parser.parse(sb.toString());
+//        } catch (ParseException e) {
+//            e.printStackTrace();
+//        }
+
+        String store_id = urlParts[3];
+        String customer_id = urlParts[5];
+        String date = urlParts[7];
+        // USE UUID to generate purchase_id
+        String purchase_id = UUID.randomUUID().toString();
+
+        purchaseDao.createPurchase(purchase_id, store_id, customer_id, date, sb.toString());
+
     }
 }

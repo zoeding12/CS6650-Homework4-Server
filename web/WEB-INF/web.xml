@@ -10,11 +10,6 @@
 
     <servlet-mapping>
         <servlet-name>HwServlet</servlet-name>
-        <url-pattern>/purchase</url-pattern>
-    </servlet-mapping>
-
-    <servlet-mapping>
-        <servlet-name>HwServlet</servlet-name>
         <url-pattern>/purchase/*</url-pattern>
     </servlet-mapping>
 
