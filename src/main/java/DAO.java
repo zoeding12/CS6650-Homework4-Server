@@ -19,7 +19,6 @@ public class DAO {
         try {
             conn = DBConnection.getConnection();
             purchaseStatement = conn.prepareStatement(purchaseInsertQuery);
-//            itemsStatement = conn.prepareStatement(itemsInsertQuery);
 
             // preparation for purchase table
             purchaseStatement.setString(1, purchase_id);
@@ -28,21 +27,8 @@ public class DAO {
             purchaseStatement.setString(4, date);
             purchaseStatement.setString(5, jsonItems);
 
-            // preparation for purchaseItems table
-//            for(int i = 0; i < items.size(); i++){
-//                JSONObject item = (JSONObject) items.get(i);
-//                String item_id = (String) item.get("ItemID");
-//                Long num_of_item_long = (Long) item.get("numberOfItems:");
-//                int num_of_item = num_of_item_long.intValue();
-//                itemsStatement.setString(1, purchase_id);
-//                itemsStatement.setString(2, item_id);
-//                itemsStatement.setInt(3, num_of_item);
-//                itemsStatement.addBatch();
-//            }
-
             // insert
             purchaseStatement.executeUpdate();
-//            int[] numUpdates = itemsStatement.executeBatch();
 
         } catch (SQLException e) {
             e.printStackTrace();

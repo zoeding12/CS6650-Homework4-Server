@@ -127,14 +127,6 @@ public class HwServlet extends HttpServlet {
             sb.append(line).append("\n");
         }
 
-//        JSONObject json = null;
-//        JSONParser parser = new JSONParser();
-//        try {
-//            json = (JSONObject) parser.parse(sb.toString());
-//        } catch (ParseException e) {
-//            e.printStackTrace();
-//        }
-
         String store_id = urlParts[3];
         String customer_id = urlParts[5];
         String date = urlParts[7];
