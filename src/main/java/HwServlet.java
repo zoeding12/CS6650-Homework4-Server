@@ -1,4 +1,11 @@
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.MessageProperties;
 import io.swagger.client.model.Purchase;
+import org.apache.commons.pool2.impl.GenericObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import ChannelPoolUtil.*;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -9,15 +16,30 @@ import javax.servlet.http.*;
 import javax.servlet.annotation.*;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 @WebServlet(name = "HwServlet", value = "/HwServlet")
 public class HwServlet extends HttpServlet {
 
-    private static final DAO purchaseDao = new DAO();
+    private final static String EXCHANGE_NAME = "messageQueue";
+    private static ChannelFactory factory = null;
+    static Connection conn = null;
+    private ChannelPool channelPool;
+
+    @Override
+    public void init() throws ServletException {
+        super.init();
+        factory = new ChannelFactory("amqp://admin:admin@54.90.84.139:5672");
+        GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
+        poolConfig.setMaxTotal(50);
+        channelPool = new ChannelPool(poolConfig, factory);
+
+    }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
@@ -108,17 +130,26 @@ public class HwServlet extends HttpServlet {
             res.getWriter().write("Invalid url for POST");
         } else {
             res.setStatus(HttpServletResponse.SC_CREATED);
-            // do any sophisticated processing with urlParts which contains all the url params
-            // TODO: process url params in `urlParts`
             res.getWriter().write("It works!");
+            Channel channel = channelPool.getChannel();
+            channel.exchangeDeclare(EXCHANGE_NAME, "fanout");
+            String message = processRequest(req, urlParts);
 
-            processRequest(req, urlParts);
+            // -- non-persistent version --
+            channel.basicPublish(EXCHANGE_NAME, "", null, message.getBytes(StandardCharsets.UTF_8));
+
+            // -- persistent version --
+//            channel.basicPublish(EXCHANGE_NAME, "", MessageProperties.PERSISTENT_TEXT_PLAIN, message.getBytes(StandardCharsets.UTF_8));
+
+            System.out.println(" [x] Sent '" + message + "'");
+            channelPool.returnChannel(channel);
+
 
         }
 
     }
 
-    protected void processRequest(HttpServletRequest req, String[] urlParts) throws IOException {
+    protected String processRequest(HttpServletRequest req, String[] urlParts) throws IOException {
         // read the request body
         BufferedReader br = req.getReader();
         StringBuilder sb = new StringBuilder();
@@ -133,7 +164,15 @@ public class HwServlet extends HttpServlet {
         // USE UUID to generate purchase_id
         String purchase_id = UUID.randomUUID().toString();
 
-        purchaseDao.createPurchase(purchase_id, store_id, customer_id, date, sb.toString());
+        // encode message into json object to pass
+        JSONObject obj = new JSONObject();
+        obj.put("purchase_id", purchase_id);
+        obj.put("store_id", store_id);
+        obj.put("customer_id", customer_id);
+        obj.put("date", date);
+        obj.put("items", sb.toString());
+
+        return obj.toJSONString();
 
     }
 }

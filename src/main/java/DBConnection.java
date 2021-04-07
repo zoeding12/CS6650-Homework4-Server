@@ -36,9 +36,6 @@ public class DBConnection {
 
     private DBConnection(){}
 
-//    public static BasicDataSource getDataSource() {
-//        return dataSource;
-//    }
     public static Connection getConnection() throws SQLException {
         return ds.getConnection();
     }

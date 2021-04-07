@@ -7,13 +7,12 @@ public class DAO {
     //private static BasicDataSource dataSource;
 
     public DAO() {
-        //dataSource = DBConnection.getDataSource();
     }
 
     public void createPurchase(String purchase_id, String store_id, String customer_id,
                                String date, String jsonItems) {
         Connection conn = null;
-//        PreparedStatement itemsStatement = null;
+
         PreparedStatement purchaseStatement = null;
         String purchaseInsertQuery = "INSERT INTO purchase (purchase_id, store_id, customer_id, open_date, purchaseItems) VALUES (?,?,?,?,?)";
         try {
