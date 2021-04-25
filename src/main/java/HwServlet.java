@@ -6,6 +6,10 @@ import io.swagger.client.model.Purchase;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import ChannelPoolUtil.*;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -20,24 +24,25 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
 @WebServlet(name = "HwServlet", value = "/HwServlet")
 public class HwServlet extends HttpServlet {
 
-    private final static String EXCHANGE_NAME = "messageQueue";
-    private static ChannelFactory factory = null;
-    static Connection conn = null;
-    private ChannelPool channelPool;
+    private KafkaProducer<String, String> kafkaProducer;
+    public static final String TOPIC = "supermarket";
 
     @Override
     public void init() throws ServletException {
         super.init();
-        factory = new ChannelFactory("amqp://admin:admin@54.90.84.139:5672");
-        GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
-        poolConfig.setMaxTotal(50);
-        channelPool = new ChannelPool(poolConfig, factory);
+        Properties prop = new Properties();
+        prop.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "54.152.226.111:9092");
+        prop.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        prop.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+
+        kafkaProducer = new KafkaProducer<>(prop);
 
     }
 
@@ -131,18 +136,10 @@ public class HwServlet extends HttpServlet {
         } else {
             res.setStatus(HttpServletResponse.SC_CREATED);
             res.getWriter().write("It works!");
-            Channel channel = channelPool.getChannel();
-            channel.exchangeDeclare(EXCHANGE_NAME, "fanout");
             String message = processRequest(req, urlParts);
-
-            // -- non-persistent version --
-            channel.basicPublish(EXCHANGE_NAME, "", null, message.getBytes(StandardCharsets.UTF_8));
-
-            // -- persistent version --
-//            channel.basicPublish(EXCHANGE_NAME, "", MessageProperties.PERSISTENT_TEXT_PLAIN, message.getBytes(StandardCharsets.UTF_8));
-
+            ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC, message);
+            kafkaProducer.send(record);
             System.out.println(" [x] Sent '" + message + "'");
-            channelPool.returnChannel(channel);
 
 
         }
